@@ -5,15 +5,16 @@ import * as kms from '@aws-cdk/aws-kms';
 import * as s3 from '@aws-cdk/aws-s3';
 import * as cdk from '@aws-cdk/core';
 import * as cxapi from '@aws-cdk/cx-api';
+import { nodeunitShim, Test } from 'nodeunit-shim';
 import * as codepipeline from '../lib';
 import { FakeBuildAction } from './fake-build-action';
 import { FakeSourceAction } from './fake-source-action';
 
 /* eslint-disable quote-props */
 
-describe('', () => {
-  describe('Pipeline', () => {
-    test('can be passed an IAM role during pipeline creation', () => {
+nodeunitShim({
+  'Pipeline': {
+    'can be passed an IAM role during pipeline creation'(test: Test) {
       const stack = new cdk.Stack();
       const role = new iam.Role(stack, 'Role', {
         assumedBy: new iam.ServicePrincipal('codepipeline.amazonaws.com'),
@@ -31,23 +32,23 @@ describe('', () => {
         },
       }));
 
+      test.done();
+    },
 
-    });
-
-    test('can be imported by ARN', () => {
+    'can be imported by ARN'(test: Test) {
       const stack = new cdk.Stack();
 
       const pipeline = codepipeline.Pipeline.fromPipelineArn(stack, 'Pipeline',
         'arn:aws:codepipeline:us-east-1:123456789012:MyPipeline');
 
-      expect(pipeline.pipelineArn).toEqual('arn:aws:codepipeline:us-east-1:123456789012:MyPipeline');
-      expect(pipeline.pipelineName).toEqual('MyPipeline');
+      test.equal(pipeline.pipelineArn, 'arn:aws:codepipeline:us-east-1:123456789012:MyPipeline');
+      test.equal(pipeline.pipelineName, 'MyPipeline');
 
+      test.done();
+    },
 
-    });
-
-    describe('that is cross-region', () => {
-      test('validates that source actions are in the same region as the pipeline', () => {
+    'that is cross-region': {
+      'validates that source actions are in the same region as the pipeline'(test: Test) {
         const app = new cdk.App();
         const stack = new cdk.Stack(app, 'PipelineStack', { env: { region: 'us-west-1', account: '123456789012' } });
         const pipeline = new codepipeline.Pipeline(stack, 'Pipeline');
@@ -60,14 +61,14 @@ describe('', () => {
           region: 'ap-southeast-1',
         });
 
-        expect(() => {
+        test.throws(() => {
           sourceStage.addAction(sourceAction);
-        }).toThrow(/Source action 'FakeSource' must be in the same region as the pipeline/);
+        }, /Source action 'FakeSource' must be in the same region as the pipeline/);
 
+        test.done();
+      },
 
-      });
-
-      test('allows passing an Alias in place of the KMS Key in the replication Bucket', () => {
+      'allows passing an Alias in place of the KMS Key in the replication Bucket'(test: Test) {
         const app = new cdk.App();
 
         const replicationRegion = 'us-west-1';
@@ -172,10 +173,10 @@ describe('', () => {
           },
         });
 
+        test.done();
+      },
 
-      });
-
-      test('generates ArtifactStores with the alias ARN as the KeyID', () => {
+      "generates ArtifactStores with the alias' ARN as the KeyID"(test: Test) {
         const app = new cdk.App();
         const replicationRegion = 'us-west-1';
 
@@ -238,10 +239,10 @@ describe('', () => {
           'UpdateReplacePolicy': 'Delete',
         }, ResourcePart.CompleteDefinition);
 
+        test.done();
+      },
 
-      });
-
-      test('allows passing an imported Bucket and Key for the replication Bucket', () => {
+      'allows passing an imported Bucket and Key for the replication Bucket'(test: Test) {
         const replicationRegion = 'us-west-1';
 
         const pipelineRegion = 'us-west-2';
@@ -295,10 +296,10 @@ describe('', () => {
           ],
         });
 
+        test.done();
+      },
 
-      });
-
-      test('generates the support stack containing the replication Bucket without the need to bootstrap in that environment', () => {
+      'generates the support stack containing the replication Bucket without the need to bootstrap in that environment'(test: Test) {
         const app = new cdk.App({
           treeMetadata: false, // we can't set the context otherwise, because App will have a child
         });
@@ -330,17 +331,17 @@ describe('', () => {
 
         const assembly = app.synth();
         const supportStackArtifact = assembly.getStackByName('PipelineStack-support-eu-south-1');
-        expect(supportStackArtifact.assumeRoleArn).toEqual(
+        test.equal(supportStackArtifact.assumeRoleArn,
           'arn:${AWS::Partition}:iam::123456789012:role/cdk-hnb659fds-deploy-role-123456789012-us-west-2');
-        expect(supportStackArtifact.cloudFormationExecutionRoleArn).toEqual(
+        test.equal(supportStackArtifact.cloudFormationExecutionRoleArn,
           'arn:${AWS::Partition}:iam::123456789012:role/cdk-hnb659fds-cfn-exec-role-123456789012-us-west-2');
 
+        test.done();
+      },
+    },
 
-      });
-    });
-
-    describe('that is cross-account', () => {
-      test('does not allow passing a dynamic value in the Action account property', () => {
+    'that is cross-account': {
+      'does not allow passing a dynamic value in the Action account property'(test: Test) {
         const app = new cdk.App();
         const stack = new cdk.Stack(app, 'PipelineStack', { env: { account: '123456789012' } });
         const sourceOutput = new codepipeline.Artifact();
@@ -354,18 +355,18 @@ describe('', () => {
         });
         const buildStage = pipeline.addStage({ stageName: 'Build' });
 
-        expect(() => {
+        test.throws(() => {
           buildStage.addAction(new FakeBuildAction({
             actionName: 'FakeBuild',
             input: sourceOutput,
             account: cdk.Aws.ACCOUNT_ID,
           }));
-        }).toThrow(/The 'account' property must be a concrete value \(action: 'FakeBuild'\)/);
+        }, /The 'account' property must be a concrete value \(action: 'FakeBuild'\)/);
 
+        test.done();
+      },
 
-      });
-
-      test('does not allow an env-agnostic Pipeline Stack if an Action account has been provided', () => {
+      'does not allow an env-agnostic Pipeline Stack if an Action account has been provided'(test: Test) {
         const app = new cdk.App();
         const stack = new cdk.Stack(app, 'PipelineStack');
         const sourceOutput = new codepipeline.Artifact();
@@ -379,18 +380,18 @@ describe('', () => {
         });
         const buildStage = pipeline.addStage({ stageName: 'Build' });
 
-        expect(() => {
+        test.throws(() => {
           buildStage.addAction(new FakeBuildAction({
             actionName: 'FakeBuild',
             input: sourceOutput,
             account: '123456789012',
           }));
-        }).toThrow(/Pipeline stack which uses cross-environment actions must have an explicitly set account/);
+        }, /Pipeline stack which uses cross-environment actions must have an explicitly set account/);
 
-
-      });
-    });
-  });
+        test.done();
+      },
+    },
+  },
 });
 
 describe('test with shared setup', () => {
